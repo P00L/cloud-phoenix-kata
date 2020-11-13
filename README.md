@@ -67,63 +67,72 @@ that were introduced during development. In particular:
 
 ## Environment set-up
 
-All following command can be scripted or managed with a cloudformation template
+All following commands can be scripted or managed with a cloudformation template avoiding manual copy and paste
 
 ### VPC
 
 ```shell script
 aws cloudformation deploy --stack-name network --template-file infrastructure/vpc.yaml --parameter-overrides `
-Name=test-network `
+Name=$env:APPLICATION_NAME  `
 VpcCIDR=10.215.0.0/16 `
 Subnet1CIDR=10.215.10.0/24 `
 Subnet2CIDR=10.215.20.0/24 `
---capabilities CAPABILITY_NAMED_IAM `
---profile certification --region eu-west-1
+--capabilities CAPABILITY_NAMED_IAM 
 ```
 
 ### ALB
 
+where SUBNET and VPC can be retrieved from CloudFormation network stack
+
 ```shell script
 aws cloudformation deploy --stack-name alb --template-file infrastructure/load-balancer.yaml --parameter-overrides `
 LaunchType=Fargate `
-Subnets=subnet-0b0f3a2b3c698c01e,subnet-06473ceff4e04ecc3 `
-VpcId=vpc-035fc1689a8cb647d `
---capabilities CAPABILITY_NAMED_IAM ``
+Subnets=$env:SUBNETS `
+VpcId=$env:VPC `
+--capabilities CAPABILITY_NAMED_IAM 
 ```
 
 ### ECS
 
+where SUBNET and VPC can be retrieved from CloudFormation network stack
+where SECURITY_GROUP can be retrieved from CloudFormation alb stack
+
 ```shell script
 aws cloudformation deploy --stack-name ecs-cluster --template-file infrastructure/ecs-cluster.yaml --parameter-overrides `
 LaunchType=Fargate `
-SourceSecurityGroup=sg-03b94c23327376219 `
-Subnets=subnet-0b0f3a2b3c698c01e,subnet-06473ceff4e04ecc3 `
-VpcId=vpc-035fc1689a8cb647d `
---capabilities CAPABILITY_NAMED_IAM ``
---profile certification --region eu-west-1
+SourceSecurityGroup=$env:SECURITY_GROUP `
+Subnets=$env:SUBNETS `
+VpcId=$env:VPC `
+--capabilities CAPABILITY_NAMED_IAM 
 ```
 
 TODO create first image on ECR
 
+where SUBNET can be retrieved from CloudFormation network stack
+where SECURITY_GROUP and TARGET_GROUP can be retrieved from CloudFormation alb stack
+where ECS_CLUSTER can be retrieved from CloudFormation ecs-cluster stack
+
 ```shell script
 aws cloudformation deploy --stack-name ecs-service --template-file infrastructure/service.yaml --parameter-overrides `
-Cluster=ecs-cluster `
+Cluster=$env:ECS_CLUSTER `
 LaunchType=Fargate `
-TargetGroup=arn:aws:elasticloadbalancing:eu-west-1:755742336600:targetgroup/alb-TargetG-UTH1KMYVW7ZA/7f528b3dd9a3358d `
-SourceSecurityGroup=sg-03b94c23327376219 `
-Subnets=subnet-0b0f3a2b3c698c01e,subnet-06473ceff4e04ecc3 `
---capabilities CAPABILITY_NAMED_IAM ``
+TargetGroup=$env:TARGET_GROUP `
+SourceSecurityGroup=$env:SECURITY_GROUP  `
+Subnets=$env:SUBNETS  `
+--capabilities CAPABILITY_NAMED_IAM 
 ```
 
 ### CodePipeline
 
+where ECS_CLUSTER and ECS_SERVICE can be retrieved from CloudFormation ecs-cluster stack
+
 ```shell script
 aws cloudformation deploy --stack-name deployment-pipeline --template-file infrastructure/deployment-pipeline.yaml --parameter-overrides `
-Cluster=ecs-cluster `
-Service=arn:aws:ecs:eu-west-1:755742336600:service/ecs-cluster/ecs-service-FargateService-QFdMvaR91bAU `
-Repo=pfusari-ecs `
-Branch=master `
---capabilities CAPABILITY_NAMED_IAM `
+Cluster=$env:ECS_CLUSTER `
+Service=$env:ECS_SERVICE `
+Repo=$env:REPO `
+Branch=$env:BRANCH `
+--capabilities CAPABILITY_NAMED_IAM 
 ```
 
 # References 
