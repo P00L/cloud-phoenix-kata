@@ -45,7 +45,11 @@ that were introduced during development. In particular:
 
 ## Architecture
 
+Following the architecture overview 
+
 ![Architecture](images/architecture.png)
+
+Following the Release change pipelie architecture overview
 
 ![Deployment](images/deploymet.png)
 
@@ -64,6 +68,8 @@ that were introduced during development. In particular:
 
 - to keep the release pipeline easier Fargate task definition will be created using CloudFormation and not managed in the release pipeline
 - source code will be on CodeCommit
+- container DB_CONNECTION_STRING environment variable will be stored as plain text, in future release it's recommended to use Secret Manager service 
+to manage secret and retrieve directly from code
 
 ## Environment set-up
 
@@ -73,10 +79,7 @@ All following commands can be scripted or managed with a cloudformation template
 
 ```shell script
 aws cloudformation deploy --stack-name network --template-file infrastructure/vpc.yaml --parameter-overrides `
-Name=$env:APPLICATION_NAME  `
-VpcCIDR=10.215.0.0/16 `
-Subnet1CIDR=10.215.10.0/24 `
-Subnet2CIDR=10.215.20.0/24 `
+Name=$env:APPLICATION_NAME `
 --capabilities CAPABILITY_NAMED_IAM 
 ```
 
@@ -89,6 +92,18 @@ aws cloudformation deploy --stack-name alb --template-file infrastructure/load-b
 LaunchType=Fargate `
 Subnets=$env:SUBNETS `
 VpcId=$env:VPC `
+--capabilities CAPABILITY_NAMED_IAM 
+```
+
+### Database
+
+where VPC and DB_SUBNET_GROUP can be retrieved from CloudFormation network stack. 
+For simplicity default value for username and password will be used, for production enforce security on secrets
+
+```shell script
+aws cloudformation deploy --stack-name documentDB --template-file infrastructure/database.yaml --parameter-overrides `
+VpcId=$env:VPC `
+DocDBSubnetGroup=$env:DB_SUBNET_GROUP `
 --capabilities CAPABILITY_NAMED_IAM 
 ```
 
@@ -106,7 +121,13 @@ VpcId=$env:VPC `
 --capabilities CAPABILITY_NAMED_IAM 
 ```
 
-TODO create first image on ECR
+Manually create first image
+
+```shell script
+$(aws ecr get-login --region $env:REGION --no-include-email)
+docker build -t $env:REPOSITORY_URI:latest .
+docker push $REPOSITORY_URI:latest
+```
 
 where SUBNET can be retrieved from CloudFormation network stack
 where SECURITY_GROUP and TARGET_GROUP can be retrieved from CloudFormation alb stack
@@ -117,14 +138,19 @@ aws cloudformation deploy --stack-name ecs-service --template-file infrastructur
 Cluster=$env:ECS_CLUSTER `
 LaunchType=Fargate `
 TargetGroup=$env:TARGET_GROUP `
-SourceSecurityGroup=$env:SECURITY_GROUP  `
-Subnets=$env:SUBNETS  `
+SourceSecurityGroup=$env:SECURITY_GROUP `
+Subnets=$env:SUBNETS `
+EcrRepository=$env:ECR_REPOSITORY `
+DBUser=$env:DBUser `
+DBPassword=$env:DBPassword `
+DBEndpoint=$env:DBEndpoint `
 --capabilities CAPABILITY_NAMED_IAM 
 ```
 
 ### CodePipeline
 
-where ECS_CLUSTER and ECS_SERVICE can be retrieved from CloudFormation ecs-cluster stack
+where ECS_CLUSTER and ECR_REPOSITORY can be retrieved from CloudFormation ecs-cluster stack
+where ECS_SERVICE can be retrieved from CloudFormation ecs-service stack
 
 ```shell script
 aws cloudformation deploy --stack-name deployment-pipeline --template-file infrastructure/deployment-pipeline.yaml --parameter-overrides `
@@ -132,6 +158,7 @@ Cluster=$env:ECS_CLUSTER `
 Service=$env:ECS_SERVICE `
 Repo=$env:REPO `
 Branch=$env:BRANCH `
+EcrRepository=$env:ECR_REPOSITORY `
 --capabilities CAPABILITY_NAMED_IAM 
 ```
 
@@ -143,3 +170,5 @@ Branch=$env:BRANCH `
 - https://docs.aws.amazon.com/codepipeline/latest/userguide/tutorials-ecs-ecr-codedeploy.html
 - https://github.com/aws-samples/ecs-blue-green-deployment/tree/fargate
 - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-containerdefinitions.html
+- https://computingforgeeks.com/create-amazon-documentdb-database-on-aws/
+- https://github.com/aws-samples/amazon-documentdb-serverless-samples

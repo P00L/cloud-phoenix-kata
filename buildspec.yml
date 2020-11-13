@@ -1,14 +1,22 @@
 version: 0.2
 
 phases:
+  install:
+    runtime-versions:
+      nodejs: 8
+    commands:
+      - echo npm Install...
+      - npm install
   pre_build:
     commands:
+      - echo npm running test...
+      - npm test
       - echo Logging in to Amazon ECR...
       - aws --version
       - $(aws ecr get-login --region eu-west-1 --no-include-email)
-      - REPOSITORY_URI=818311065640.dkr.ecr.eu-west-1.amazonaws.com/payment-service
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
+      - npm install
   build:
     commands:
       - echo Build started on `date`
