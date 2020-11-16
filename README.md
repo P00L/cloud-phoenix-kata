@@ -44,12 +44,15 @@ that were introduced during development. In particular:
 # Solution
 
 ## Architecture
+Phoenix application will be containerized and exposed with ECS Fargate as orchestration engine with an Application Load 
+Balancer to distribute the load. For the database layer instead of using plain MongoDB will be used DocumentDB, AWS managed service
+for running MongoDB. Logs will be shipped to AWS CloudWatch. 
 
-Following the architecture overview 
+Docker images will be manged by AWS managed docker registry ECR
 
 ![Architecture](images/architecture.png)
 
-Following the Release change pipelie architecture overview
+Following the Release change pipeline architecture overview
 
 ![Deployment](images/deploymet.png)
 
