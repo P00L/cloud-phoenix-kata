@@ -55,14 +55,15 @@ Following the Release change pipelie architecture overview
 
 ## Requirements
 
-| Requirement                                                                  | Solution                  | 
-|------------------------------------------------------------------------------|---------------------------|
-| Automate the creation of the infrastructure and the setup of the application.| CloudFormation template   | 
-| Recover from crashes. Implement a method autorestart the service on crash    | ECS HealthCheck           | 
-| Backup the logs and database with rotation of 7 days                         | CloudWatch retention      | 
-| Notify any CPU peak                                                          | CloudWatch metrics        | 
-| Implements a CI/CD pipeline for the code                                     | CodePipeline suite        | 
-| Scale when the number of request are greater than 10 req /sec                | ECS custom scaling policy | 
+| Requirement                                                                  | Solution                                   | 
+|------------------------------------------------------------------------------|--------------------------------------------|
+| Automate the creation of the infrastructure and the setup of the application.| CloudFormation stack                       | 
+| Recover from crashes. Implement a method autorestart the service on crash    | ECS HealthCheck                            | 
+| Backup the logs and database with rotation of 7 days                         | CloudWatch log retention                   | 
+| Notify any CPU peak                                                          | CloudWatch metrics + alarm                 | 
+| Implements a CI/CD pipeline for the code                                     | CodePipeline suite                         | 
+| Scale when the number of request are greater than 10 req /sec                | ECS auto-scaling + ALB ALBRequestCountPerTarget metric | 
+| Unwanted features                                                            | ALB path base routing                      |
 
 ## Assumptions
 
@@ -70,6 +71,7 @@ Following the Release change pipelie architecture overview
 - source code will be on CodeCommit
 - container DB_CONNECTION_STRING environment variable will be stored as plain text, in future release it's recommended to use Secret Manager service 
 to manage secret and retrieve directly from code
+- GET /generatecert and GET /crash will be considered a fault and traffic will not be forwarded to the ECS cluster 
 
 ## Environment set-up
 
@@ -130,7 +132,7 @@ docker push $REPOSITORY_URI:latest
 ```
 
 where SUBNET can be retrieved from CloudFormation network stack
-where SECURITY_GROUP and TARGET_GROUP can be retrieved from CloudFormation alb stack
+where SECURITY_GROUP, TARGET_GROUP, ALB_FULLNAME and TARGET_GROUP_FULLNAME can be retrieved from CloudFormation alb stack
 where ECS_CLUSTER can be retrieved from CloudFormation ecs-cluster stack
 
 ```shell script
@@ -144,6 +146,8 @@ EcrRepository=$env:ECR_REPOSITORY `
 DBUser=$env:DBUser `
 DBPassword=$env:DBPassword `
 DBEndpoint=$env:DBEndpoint `
+ALBFullname=$env:ALB_FULLNAME `
+TargetGroupFullname=$env:TARGET_GROUP_FULLNAME `
 --capabilities CAPABILITY_NAMED_IAM 
 ```
 
@@ -172,3 +176,4 @@ EcrRepository=$env:ECR_REPOSITORY `
 - https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-containerdefinitions.html
 - https://computingforgeeks.com/create-amazon-documentdb-database-on-aws/
 - https://github.com/aws-samples/amazon-documentdb-serverless-samples
+- https://stelligent.com/2017/09/26/application-auto-scaling-with-amazon-ecs/

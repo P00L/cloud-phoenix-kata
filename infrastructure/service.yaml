@@ -27,6 +27,13 @@ Parameters:
     Type: String
   DBEndpoint:
     Type: String
+  LogGroupRetention:
+    Type: Number
+    Default: 7
+  ALBFullname:
+    Type: String
+  TargetGroupFullname:
+    Type: String
 
 Conditions:
   Fargate: !Equals [ !Ref LaunchType, "Fargate" ]
@@ -51,6 +58,7 @@ Resources:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName: !Sub /ecs/${AWS::StackName}
+      RetentionInDays: !Ref LogGroupRetention
 
   FargateService:
     Type: AWS::ECS::Service
@@ -71,7 +79,7 @@ Resources:
           ContainerPort: 80
           TargetGroupArn: !Ref TargetGroup
 
-  EC2Service:
+  ECSService:
     Type: AWS::ECS::Service
     Condition: EC2
     Properties:
@@ -111,6 +119,71 @@ Resources:
               awslogs-region: !Ref AWS::Region
               awslogs-group: !Ref LogGroup
               awslogs-stream-prefix: !Ref AWS::StackName
+
+  # ------------------------------ ALARM NOTIFICATION ------------------------------
+  CPUPeaksNotification:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: String
+      TopicName: ECS-CPU-alarm-notification
+  CPUPeaksAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: CPU utilization greater than 90%
+      Namespace: AWS/ECS
+      MetricName: CPUUtilization
+      Dimensions:
+        - Name: ClusterName
+          Value: !Ref Cluster
+        - Name: ServiceName
+          Value: !GetAtt ECSService.Name
+      Statistic: Maximum
+      Period: "60"
+      EvaluationPeriods: "1"
+      Threshold: "90"
+      ComparisonOperator: GreaterThanThreshold
+      AlarmActions: !Ref CPUPeaksNotification
+
+  # ------------------------------ AUTO SCALING ------------------------------
+  ApplicationAutoScalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - application-autoscaling.amazonaws.com
+            Action:
+              - sts:AssumeRole
+        Path: "/"
+        ManagedPolicyArns:
+          - arn:aws:iam::aws:policy/aws-service-role/AWSApplicationAutoscalingECSServicePolicy
+
+  AutoScalingTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 10
+      MinCapacity: 1
+      ResourceId: !Sub /service/${Cluster}/${ECSService.Name}
+      RoleARN: !GetAtt ApplicationAutoScalingRole.Arn
+      ScalableDimension: ecs:service:DesiredCount
+      ServiceNamespace: ecs
+
+  AutoScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: ECSScalingBlogPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref AutoScalingTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 600
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ALBRequestCountPerTarget
+          ResourceLabel: !Sub ${ALBFullname}/${TargetGroupFullname}
+
 Outputs:
   Service:
-    Value: !If [ Fargate, !Ref FargateService, !Ref EC2Service ]
+    Value: !If [ Fargate, !Ref FargateService, !Ref ECSService ]

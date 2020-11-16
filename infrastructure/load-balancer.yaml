@@ -71,7 +71,7 @@ Resources:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       ListenerArn: !Ref LoadBalancerListener
-      Priority: 1
+      Priority: 2
       Conditions:
         - Field: path-pattern
           Values:
@@ -80,14 +80,33 @@ Resources:
         - TargetGroupArn: !Ref TargetGroup
           Type: forward
 
+  # denied path for GET /generatecert and GET /crash
+  ListenerRuleDeny:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      ListenerArn: !Ref LoadBalancerListener
+      Priority: 1
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - /generatecert
+            - /crasch
+      Actions:
+        - Type: fixed-response
+          FixedResponseConfig:
+            StatusCode: 501
 
 Outputs:
   TargetGroup:
     Value: !Ref TargetGroup
-
   ServiceUrl:
     Description: URL of the load balancer for the sample service.
     Value: !Sub http://${LoadBalancer.DNSName}
-
   SecurityGroup:
     Value: !Ref SecurityGroup
+  LoadBalancerFullName:
+    Description: ALB full name
+    Value: !GetAtt LoadBalancer.LoadBalancerFullName
+  TargetGroupFullName:
+    Description: ALB Target Group full name
+    Value: !GetAtt TargetGroup.TargetGroupFullName
