@@ -52,7 +52,8 @@ Docker images will be manged by AWS managed docker registry ECR
 
 ![Architecture](images/architecture.png)
 
-Following the Release change pipeline architecture overview
+Source code will be stored in CodeCommit and release pipeline will be managed by CodePipeline, with CodeBuild for artifact build
+and running test while deployment will be managed by ECS CodePipeline deployer.
 
 ![Deployment](images/deploymet.png)
 
@@ -65,8 +66,8 @@ Following the Release change pipeline architecture overview
 | Backup the logs and database with rotation of 7 days                         | CloudWatch log retention                   | 
 | Notify any CPU peak                                                          | CloudWatch metrics + alarm                 | 
 | Implements a CI/CD pipeline for the code                                     | CodePipeline suite                         | 
-| Scale when the number of request are greater than 10 req /sec                | ECS auto-scaling + ALB ALBRequestCountPerTarget metric | 
-| Unwanted features                                                            | ALB path base routing                      |
+| Scale when the number of request are greater than 10 req /sec                | ECS target tracking scaling + ALB ALBRequestCountPerTarget metric | 
+| Unwanted features                                                            | ALB path base routing listener rules                      |
 
 ## Assumptions
 
@@ -74,7 +75,8 @@ Following the Release change pipeline architecture overview
 - source code will be on CodeCommit
 - container DB_CONNECTION_STRING environment variable will be stored as plain text, in future release it's recommended to use Secret Manager service 
 to manage secret and retrieve directly from code
-- GET /generatecert and GET /crash will be considered a fault and traffic will not be forwarded to the ECS cluster 
+- GET /generatecert and GET /crash will be considered a fault and traffic will not be forwarded to the ECS cluster
+- no domain and certificate will be managed for simplicity
 
 ## Environment set-up
 
@@ -103,7 +105,7 @@ VpcId=$env:VPC `
 ### Database
 
 where VPC and PRIVATE_SUBNETS can be retrieved from CloudFormation network stack. 
-For simplicity default value for username and password will be used, for production enforce security on secrets
+For simplicity default value for username will be used, for production enforce security on secrets
 
 ```shell script
 aws cloudformation deploy --stack-name documentDB --template-file infrastructure/database.yaml --parameter-overrides `
