@@ -182,5 +182,3 @@ EcrRepository=$env:ECR_REPOSITORY `
 - https://computingforgeeks.com/create-amazon-documentdb-database-on-aws/
 - https://github.com/aws-samples/amazon-documentdb-serverless-samples
 - https://stelligent.com/2017/09/26/application-auto-scaling-with-amazon-ecs/
-
---profile certification --region eu-west-1
