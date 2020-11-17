@@ -169,17 +169,11 @@ Resources:
     Properties:
       RouteTableId: !Ref PrivateRouteTableTwo
       SubnetId: !Ref PrivateSubnetTwo
-  DocDBSubnetGroup:
-    Type: AWS::DocDB::DBSubnetGroup
-    Properties:
-      DBSubnetGroupDescription: Subnet group for DocumentDB
-      SubnetIds:
-        - Ref: PrivateSubnetOne
-        - Ref: PrivateSubnetTwo
+
 Outputs:
-  Subnets:
+  PrivateSubnets:
     Value: !Join [ ",", [ !Ref PrivateSubnetOne, !Ref PrivateSubnetTwo ] ]
+  PublicSubnets:
+    Value: !Join [ ",", [ !Ref PublicSubnetOne, !Ref PublicSubnetTwo ] ]
   VpcId:
     Value: !Ref VPC
-  DocDBSubnetGroupName:
-    Value: !Ref DocDBSubnetGroup

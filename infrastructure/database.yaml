@@ -5,8 +5,8 @@ Description: This stack deploys the DocumentDB
 Parameters:
   VpcId:
     Type: AWS::EC2::VPC::Id
-  DocDBSubnetGroup:
-    Type: AWS::DocDB::DBSubnetGroup
+  Subnets:
+    Type: List<AWS::EC2::Subnet::Id>
   DBClusterName:
     Default: MyDocDB
     Description: Cluster name
@@ -64,6 +64,11 @@ Parameters:
       Please refer to: https://docs.aws.amazon.com/documentdb/latest/developerguide/db-instance-classes.html#db-instance-classes-by-region'
 
 Resources:
+  DocDBSubnetGroup:
+    Type: AWS::DocDB::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for DocumentDB
+      SubnetIds: !Ref Subnets
   DocumentDBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -82,7 +87,8 @@ Resources:
     Properties:
       DBClusterIdentifier: !Ref DBClusterName
       DBSubnetGroupName: !Ref DocDBSubnetGroup
-      VpcSecurityGroupIds: !GetAtt DocumentDBSecurityGroup.GroupId
+      VpcSecurityGroupIds:
+        - !GetAtt DocumentDBSecurityGroup.GroupId
       MasterUsername: !Ref MasterUser
       MasterUserPassword: !Ref MasterPassword
   DBInstance:

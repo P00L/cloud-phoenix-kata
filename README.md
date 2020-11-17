@@ -90,38 +90,39 @@ Name=$env:APPLICATION_NAME `
 
 ### ALB
 
-where SUBNET and VPC can be retrieved from CloudFormation network stack
+where PUBLIC_SUBNETS and VPC can be retrieved from CloudFormation network stack
 
 ```shell script
 aws cloudformation deploy --stack-name alb --template-file infrastructure/load-balancer.yaml --parameter-overrides `
 LaunchType=Fargate `
-Subnets=$env:SUBNETS `
+Subnets=$env:PUBLIC_SUBNETS `
 VpcId=$env:VPC `
 --capabilities CAPABILITY_NAMED_IAM 
 ```
 
 ### Database
 
-where VPC and DB_SUBNET_GROUP can be retrieved from CloudFormation network stack. 
+where VPC and PRIVATE_SUBNETS can be retrieved from CloudFormation network stack. 
 For simplicity default value for username and password will be used, for production enforce security on secrets
 
 ```shell script
 aws cloudformation deploy --stack-name documentDB --template-file infrastructure/database.yaml --parameter-overrides `
 VpcId=$env:VPC `
-DocDBSubnetGroup=$env:DB_SUBNET_GROUP `
+MasterPassword=$env:DB_PASSWORD `
+Subnets=$env:PRIVATE_SUBNETS `
 --capabilities CAPABILITY_NAMED_IAM 
 ```
 
 ### ECS
 
-where SUBNET and VPC can be retrieved from CloudFormation network stack
+where PUBLIC_SUBNETS and VPC can be retrieved from CloudFormation network stack
 where SECURITY_GROUP can be retrieved from CloudFormation alb stack
 
 ```shell script
 aws cloudformation deploy --stack-name ecs-cluster --template-file infrastructure/ecs-cluster.yaml --parameter-overrides `
 LaunchType=Fargate `
 SourceSecurityGroup=$env:SECURITY_GROUP `
-Subnets=$env:SUBNETS `
+Subnets=$env:PUBLIC_SUBNETS `
 VpcId=$env:VPC `
 --capabilities CAPABILITY_NAMED_IAM 
 ```
@@ -134,9 +135,10 @@ docker build -t $env:REPOSITORY_URI:latest .
 docker push $REPOSITORY_URI:latest
 ```
 
-where SUBNET can be retrieved from CloudFormation network stack
+where PUBLIC_SUBNETS can be retrieved from CloudFormation network stack
 where SECURITY_GROUP, TARGET_GROUP, ALB_FULLNAME and TARGET_GROUP_FULLNAME can be retrieved from CloudFormation alb stack
 where ECS_CLUSTER can be retrieved from CloudFormation ecs-cluster stack
+where DB_USER, DB_PASSWORD, DB_ENDPOINT can be retrieved from CloudFormation database stack
 
 ```shell script
 aws cloudformation deploy --stack-name ecs-service --template-file infrastructure/service.yaml --parameter-overrides `
@@ -144,11 +146,11 @@ Cluster=$env:ECS_CLUSTER `
 LaunchType=Fargate `
 TargetGroup=$env:TARGET_GROUP `
 SourceSecurityGroup=$env:SECURITY_GROUP `
-Subnets=$env:SUBNETS `
+Subnets=$env:PUBLIC_SUBNETS `
 EcrRepository=$env:ECR_REPOSITORY `
-DBUser=$env:DBUser `
-DBPassword=$env:DBPassword `
-DBEndpoint=$env:DBEndpoint `
+DBUser=$env:DB_USER `
+DBPassword=$env:DB_PASSWORD `
+DBEndpoint=$env:DB_ENDPOINT `
 ALBFullname=$env:ALB_FULLNAME `
 TargetGroupFullname=$env:TARGET_GROUP_FULLNAME `
 --capabilities CAPABILITY_NAMED_IAM 
@@ -180,3 +182,5 @@ EcrRepository=$env:ECR_REPOSITORY `
 - https://computingforgeeks.com/create-amazon-documentdb-database-on-aws/
 - https://github.com/aws-samples/amazon-documentdb-serverless-samples
 - https://stelligent.com/2017/09/26/application-auto-scaling-with-amazon-ecs/
+
+--profile certification --region eu-west-1

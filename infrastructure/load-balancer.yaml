@@ -90,7 +90,7 @@ Resources:
         - Field: path-pattern
           Values:
             - /generatecert
-            - /crasch
+            - /crash
       Actions:
         - Type: fixed-response
           FixedResponseConfig:
